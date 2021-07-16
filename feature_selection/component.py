@@ -1,10 +1,9 @@
 import tfx.v1 as tfx
 from tfx.dsl.component.experimental.decorators import component
+from tfx.types import standard_artifacts
+
 from sklearn.feature_selection import chi2, SelectKBest, SelectPercentile, SelectFpr, SelectFdr, SelectFwe
-
-from typing import Any, List
-from enum import Enum
-
+from typing import List
 
 _selection_modes = {'percentile': SelectPercentile,
                         'k_best': SelectKBest,
@@ -12,9 +11,9 @@ _selection_modes = {'percentile': SelectPercentile,
                         'fdr': SelectFdr,
                         'fwe': SelectFwe}
 
-# our custom artifact will be for Feature scores
-"""Custom Artifact type"""
 
+
+"""Custom Artifact type"""
 
 class FeatureScores(tfx.types.artifact.Artifact):
     """Output artifact containing feature scores from the Feature Selection component"""
@@ -32,9 +31,8 @@ class FeaturePValues(tfx.types.artifact.Artifact):
         'split_names': standard_artifacts.SPLIT_NAMES_PROPERTY,
     }
 
-# our custom component will be feature selection
 
-
+# Main component logic
 @component
 def FeatureSelection(
     input_data: List,
@@ -55,12 +53,15 @@ def FeatureSelection(
         column_names: to generate artifact dictionaries containing scores
     """
 
+    # Select features based on scores
     selector = _selection_modes[selector_func](score_func, k=num_param)
     selected_data = selector.fit_transform(input_data, target_column)
 
+    # get scores and p-values for artifacts
     selector_scores = selector.scores_
     selector_p_values = selector.pvalues_
 
+    # convert scores and p-values to dictionaries with column names as keys for better comprehensibility
     scores = dict(zip(column_names, selector_scores))
     pvalues = dict(zip(column_names, selector_p_values))
 
